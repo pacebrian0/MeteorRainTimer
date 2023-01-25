@@ -4,33 +4,37 @@
 
 typedef struct PixelStrip {
   byte pin;
-  int timingMS;
+  unsigned long timingMS;
+  unsigned long lastRun;
 } PixelStrip;
 
 
 /*************************************************************
 pin: pin on this controller
-pollTiming: time in ms to wait until next trigger
-countdown: internal time to wait for next trigger. Leave as-is.
+timingMS: time in ms to wait until next trigger
+lastRun: internal time to wait for next trigger. Leave as-is.
 *************************************************************/
 
 PixelStrip strips[] = {
-  //  pin   triggerTiming countdown        
-    {   6,  1000,         0},
-    {   7,  1000,         0},
+  //  pin   timingMS  lastRun        
+    {   6,  1000,     0},
+    //{   7,  1000,     0},
 };
 
 #define NUMSTRIPS (sizeof(strips) / sizeof(strips[0]))
 
 const int wipeTiming = 1000; //time in ms to wait for wipe to finish
-unsigned long previousMillisMainLoop = 0;  // to measure loop time per millisecond precisely
-unsigned long currentMS = 0;  // to keep track of current ms
+unsigned long previousTime = 0;  // to measure loop time per millisecond precisely
+unsigned long currentTime = 0;  // to keep track of current ms
 
 void setup() {
+  Serial.begin(115200);  
   // put your setup code here, to run once:
     for (int i = 0; i < NUMSTRIPS; i++) {
+      PixelStrip* s = &strips[i];
       // set the digital pin as output:
-      pinMode(strips[i].pin, OUTPUT);
+      pinMode(s->pin, OUTPUT);
+      s->lastRun = millis();   
     }
 
   delay(wipeTiming);
@@ -40,22 +44,35 @@ void setup() {
 void Timings()
 {
   for (int i = 0; i < NUMSTRIPS; i++) {
-    PixelStrip s = strips[i];
-    if(s.countdown == 0)
+    PixelStrip* s = &strips[i];
+    // Serial.print(currentTime);
+    // Serial.print("\t");    
+    // Serial.print(s->lastRun);
+    // Serial.print("\t");     
+    // Serial.println(currentTime - s->lastRun);
+    if ((unsigned long)(currentTime - s->lastRun) > s->timingMS)
     {
-      //send pin
-      s.countdown = s.triggerTiming
+      s->lastRun = currentTime;  
+      Serial.print("Sending pin ");
+      Serial.println(s->pin);
     }
-    else s.countdown--;
+    
+
+    // if(s.countdown == 0)
+    // {
+    //   //send pin
+    //   s.countdown = s.timingMS;
+    // }
+    // else s.countdown--;
   }
 }
 
 void loop() {
   // put your main code here, to run repeatedly:
-    currentMS = millis();
-    if(currentMS > previousMillisMainLoop){
+    currentTime = millis();
+    if(currentTime > previousTime){
       Timings();
-      previousMillisMainLoop = currentMS;
+      previousTime = currentTime;
     }
 
 

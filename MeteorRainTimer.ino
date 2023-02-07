@@ -40,7 +40,7 @@ bool isFinished = false;
 //------------------------------------------
 
 void setup() {
-  Serial.begin(115200);  
+  //Serial.begin(115200);  
   Timer1.initialize(1000); // set the timer to trigger every 1 millisecond (1000 microseconds)
   Timer1.attachInterrupt(timerIsr); // attach the interrupt service routine (ISR)
   pinMode(LED_BUILTIN, OUTPUT);

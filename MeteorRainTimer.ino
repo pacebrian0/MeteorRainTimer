@@ -11,13 +11,14 @@ typedef struct PixelStrip {
 
 /*************************************************************
 pin: pin on this controller
-ledGroup: used to group up different led strips to begin together e.g. strip 1 & 2, strip 3 & 4... Begin from 0
+ledGroup: used to group up different devices to begin together e.g. devices 1 & 2, devices 3 & 4... Begin from 0. Note that you can use different groups with same pin number if main device has multiple groups.
 *************************************************************/
 
 PixelStrip strips[] = {
   //  pin  ledGroup          
-    { 6,   0 },
-    { 6,   1 },
+    { 6,   0 }, // strip 1 on arduino 1
+    { 6,   1 }, // strip 2 on arduino 1 
+    { 7,   1 }, // strip 1 on arduino 2
 };
 
 // CONFIGURE-----------------------------

@@ -1,38 +1,47 @@
 /*  Copyright (c) 2023 Brian J Pace
     Email: pacebrian0@gmail.com
 */
+#include <TimerOne.h>
 
 typedef struct PixelStrip {
   byte pin;
-  unsigned long timingMS;
-  unsigned long initTimingMS;
-  unsigned long lastRun;
-  bool isOn;
+  byte ledGroup;
 } PixelStrip;
 
 
 /*************************************************************
 pin: pin on this controller
-initTimingMS: time in ms to wait on the first loop
-timingMS: time in ms to wait until next trigger
-lastRun: internal time to wait for next trigger. Leave as-is.
-isOn: internal check to indicate pin is on
+ledGroup: used to group up different led strips to begin together e.g. strip 1 & 2, strip 3 & 4... Begin from 0
 *************************************************************/
 
 PixelStrip strips[] = {
-  //  pin   timingMS  initTimingMS  lastRun isOn        
-    {   6,  200,     0,            0,      false},// we have 5 steps
-    //{   7,  1000,   10000,            0,    false},
+  //  pin  ledGroup          
+    { 6,   0 },
+    { 6,   1 },
 };
 
-#define NUMSTRIPS (sizeof(strips) / sizeof(strips[0]))
+// CONFIGURE-----------------------------
+unsigned long GROUPSWAIT = 200; // ms to wait between groups
+unsigned long POSTGROUPSWAIT = 5000; // ms to wait after all groups have been triggered
+unsigned long WIPETIMING = 5000; //time in ms to wait for wipe to finish
+//------------------------------------------
 
-const int wipeTiming = 10000; //time in ms to wait for wipe to finish
-unsigned long previousTime = 0;  // to measure loop time per millisecond precisely
-unsigned long currentTime = 0;  // to keep track of current ms
+
+// DO NOT TOUCH-----------------------------
+#define NUMSTRIPS (sizeof(strips) / sizeof(strips[0]))
+unsigned long PREVTIME = 0;  // to measure loop time per millisecond precisely
+unsigned long CURRTIME = 0;  // to keep track of current ms
+unsigned long LASTRUNTIME = 0; // to keep track of last group trigger
+unsigned long GROUPTIME = 0;  // to keep track of start of run
+byte currLedGroup = 0; // to keep track of current group
+byte maxLedGroup = 0; // to keep track of max group
+bool isFinished = false; 
+//------------------------------------------
 
 void setup() {
   Serial.begin(115200);  
+  Timer1.initialize(1000); // set the timer to trigger every 1 millisecond (1000 microseconds)
+  Timer1.attachInterrupt(timerIsr); // attach the interrupt service routine (ISR)
   pinMode(LED_BUILTIN, OUTPUT);
   
   // put your setup code here, to run once:
@@ -40,27 +49,45 @@ void setup() {
       PixelStrip* s = &strips[i];
       // set the digital pin as output:
       pinMode(s->pin, OUTPUT);
-      s->lastRun = millis() + s->initTimingMS + wipeTiming;   // for the start delay
-      Serial.print(s->lastRun);      
+      if (s->ledGroup > maxLedGroup)
+        maxLedGroup = s->ledGroup;
     }
-  delay(wipeTiming);
-
+    Serial.println("Waiting for wipe");
+  delay(WIPETIMING);
+  //CURRTIME = millis();
+  LASTRUNTIME = CURRTIME;  
+  Serial.println("Wipe done");
 }
 
+void timerIsr() {
+  CURRTIME++;
+}
 
 void Timings()
 {
+  if(isFinished && (unsigned long)(CURRTIME - GROUPTIME) < POSTGROUPSWAIT) // finished but waiting for post group wait
+    return;
+  else if (isFinished) // starting now
+  {
+    isFinished = false;
+    GROUPTIME = CURRTIME;
+  }
+
+  if((unsigned long)(CURRTIME - LASTRUNTIME) < GROUPSWAIT) // still waiting for delay between groups
+    return;
+
+  
   for (int i = 0; i < NUMSTRIPS; i++) {
     PixelStrip* s = &strips[i];
-    // Serial.print(currentTime);
+    // Serial.print(CURRTIME);
     // Serial.print("\t");    
     // Serial.print(s->lastRun);
     // Serial.print("\t");     
-    // Serial.println(currentTime - s->lastRun);
+    // Serial.println(CURRTIME - s->lastRun);
 
-    if ((unsigned long)(currentTime - s->lastRun) > s->timingMS)
+    if (s->ledGroup == currLedGroup)
     {
-      s->lastRun = currentTime;  
+      LASTRUNTIME = CURRTIME;  
       Serial.print("Sending pin ");
       digitalWrite(LED_BUILTIN, HIGH);  // Onboard LED feedback
       digitalWrite(s->pin, HIGH);
@@ -68,23 +95,26 @@ void Timings()
       digitalWrite(LED_BUILTIN, LOW); 
       digitalWrite(s->pin, LOW);
     }
-     
+  }
 
-    // if(s.countdown == 0)
-    // {
-    //   //send pin
-    //   s.countdown = s.timingMS;
-    // }
-    // else s.countdown--;
+  currLedGroup++;
+
+  if(currLedGroup > maxLedGroup)
+  {
+    Serial.print("Done, waiting for ");
+    Serial.println(POSTGROUPSWAIT);
+    isFinished = true;
+    currLedGroup = 0;  
+    GROUPTIME = CURRTIME;
   }
 }
 
 void loop() {
   // put your main code here, to run repeatedly:
-    currentTime = millis();
-    if(currentTime > previousTime){
+    //CURRTIME = millis();
+    if(CURRTIME > PREVTIME){
       Timings();
-      previousTime = currentTime;
+      PREVTIME = CURRTIME;
     }
 
 

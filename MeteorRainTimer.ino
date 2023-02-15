@@ -18,11 +18,13 @@ PixelStrip strips[] = {
   //  pin  ledGroup          
     { 6,   0 }, // strip 1 on arduino 1
     { 6,   1 }, // strip 2 on arduino 1 
+    { 6,   2 }, // strip 3 on arduino 1 
+    { 6,   3 }, // strip 4 on arduino 1 
     { 7,   1 }, // strip 1 on arduino 2
 };
 
 // CONFIGURE-----------------------------
-unsigned long GROUPSWAIT = 200; // ms to wait between groups
+unsigned long GROUPSWAIT = 1000; // ms to wait between groups
 unsigned long POSTGROUPSWAIT = 5000; // ms to wait after all groups have been triggered
 unsigned long WIPETIMING = 5000; //time in ms to wait for wipe to finish
 //------------------------------------------
